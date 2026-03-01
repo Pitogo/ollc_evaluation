@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OLLC Evaluation System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --navy: #0d1b2a;
+      --deep: #1b2d45;
+      --accent: #e8a838;
+      --accent2: #f0c96a;
+      --light: #f4f1eb;
+      --white: #ffffff;
+      --muted: #8a9bb0;
+      --danger: #e85c38;
+      --success: #38c97e;
+      --card-bg: #182535;
+      --input-bg: #0f1e2e;
+      --border: rgba(232,168,56,0.25);
+      --shadow: 0 8px 40px rgba(0,0,0,0.45);
+      --radius: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--navy);
+      color: var(--light);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(232,168,56,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(56,114,232,0.06) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+    .screen {
+      display: none;
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      animation: fadeIn 0.4s ease;
+    }
+    .screen.active { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(232,168,56,0.5); }
+      70%  { box-shadow: 0 0 0 10px rgba(232,168,56,0); }
+      100% { box-shadow: 0 0 0 0 rgba(232,168,56,0); }
+    }
+    .updated { animation: pulse 0.6s ease; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2.4rem 2.8rem;
+    }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+    .logo span { color: var(--light); font-size: 0.95rem; display: block; font-family: 'Source Sans 3', sans-serif; font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 0.75rem 1.8rem;
+      border: none; border-radius: 8px;
+      font-family: 'Source Sans 3', sans-serif; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .btn-primary { background: var(--accent); color: var(--navy); }
+    .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,168,56,0.3); }
+    .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+    .btn-outline:hover { background: rgba(232,168,56,0.08); }
+    .btn-ghost { background: rgba(255,255,255,0.05); color: var(--light); border: 1px solid rgba(255,255,255,0.1); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+    .btn-success { background: var(--success); color: var(--navy); }
+    .btn-success:hover { opacity: 0.88; }
+    .btn-full { width: 100%; }
+    .btn-lg { padding: 1rem 2.2rem; font-size: 1.05rem; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    input[type="text"], input[type="password"], select {
+      width: 100%; padding: 0.7rem 1rem;
+      background: var(--input-bg); color: var(--light);
+      border: 1.5px solid rgba(255,255,255,0.1); border-radius: 8px;
+      font-family: 'Source Sans 3', sans-serif; font-size: 0.95rem;
+      transition: border-color 0.2s; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,168,56,0.12); }
+    select option { background: var(--deep); }
+    .form-group { margin-bottom: 1.2rem; }
+    .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+    }
+    .badge-gold { background: rgba(232,168,56,0.15); color: var(--accent); border: 1px solid rgba(232,168,56,0.3); }
+    .badge-blue { background: rgba(56,114,232,0.15); color: #7eb4f7; border: 1px solid rgba(56,114,232,0.3); }
+
+    .rating-row { display: flex; align-items: center; gap: 6px; margin-bottom: 0.6rem; }
+    .rating-label { flex: 1; font-size: 0.88rem; color: var(--light); }
+    .rating-options { display: flex; gap: 10px; }
+    .rating-options label {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 0.75rem; color: var(--muted); text-transform: none; letter-spacing: 0;
+      cursor: pointer;
+    }
+    .rating-options input[type="radio"] { display: none; }
+    .rating-circle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem; color: var(--muted);
+      transition: all 0.2s; cursor: pointer;
+    }
+    .rating-options input[type="radio"]:checked + .rating-circle {
+      border-color: var(--accent); background: var(--accent); color: var(--navy);
+      box-shadow: 0 0 12px rgba(232,168,56,0.4);
+    }
+    .rating-options label:hover .rating-circle { border-color: var(--accent2); color: var(--accent2); }
+
+    .score-block {
+      background: rgba(232,168,56,0.06); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.4rem;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 0.7rem;
+    }
+    .score-block .label { font-size: 0.85rem; color: var(--muted); }
+    .score-block .value { font-size: 1.4rem; font-weight: 700; color: var(--accent); font-family: 'Playfair Display', serif; }
+    .progress-wrap { background: rgba(255,255,255,0.07); border-radius: 99px; height: 6px; overflow: hidden; margin-top: 6px; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.6s ease; }
+
+    #screen-role { align-items: center; justify-content: center; padding: 2rem; }
+    #screen-role .inner { text-align: center; max-width: 420px; width: 100%; }
+    #screen-role .logo { font-size: 2.2rem; margin-bottom: 6px; }
+    #screen-role .subtitle { color: var(--muted); margin-bottom: 2.8rem; font-size: 0.95rem; }
+    .role-cards { display: flex; gap: 1.2rem; }
+    .role-card {
+      flex: 1; background: var(--card-bg);
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 2rem 1.4rem; text-align: center; cursor: pointer; transition: all 0.25s;
+    }
+    .role-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 12px 30px rgba(232,168,56,0.15); }
+    .role-icon { font-size: 2.4rem; margin-bottom: 0.8rem; }
+    .role-card h3 { font-family: 'Playfair Display', serif; color: var(--accent); font-size: 1.15rem; }
+    .role-card p { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+    #screen-login { align-items: center; justify-content: center; padding: 2rem; }
+    #screen-login .inner { max-width: 400px; width: 100%; }
+    #screen-login .logo { margin-bottom: 1.6rem; }
+    #screen-login .card h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 4px; }
+    #screen-login .card .desc { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.6rem; }
+
+    #screen-admin { flex-direction: column; padding: 2rem; align-items: center; }
+    .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.8rem; width: 100%; max-width: 900px; }
+    .admin-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; max-width: 900px; width: 100%; }
+    .card h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--accent2); margin-bottom: 1.2rem; }
+
+    #screen-student { flex-direction: column; padding: 2rem; align-items: center; }
+    .student-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.8rem; width: 100%; max-width: 700px; }
+    .eval-form-card { max-width: 700px; width: 100%; }
+    .criteria-section h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin: 1.4rem 0 0.8rem; border-left: 3px solid var(--accent); padding-left: 8px; }
+    .rating-header { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 4px; }
+    .rating-header span { width: 36px; text-align: center; font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+
+    #screen-after { align-items: center; justify-content: center; padding: 2rem; }
+    #screen-after .inner { max-width: 400px; width: 100%; text-align: center; }
+    #screen-after .check { font-size: 3.5rem; margin-bottom: 1rem; }
+    #screen-after h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--success); margin-bottom: 0.5rem; }
+    #screen-after p.sub { color: var(--muted); margin-bottom: 1.2rem; }
+    .after-btns { display: flex; flex-direction: column; gap: 0.8rem; }
+    .submitted-summary {
+      background: rgba(56,201,126,0.07); border: 1px solid rgba(56,201,126,0.2);
+      border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.5rem; text-align: left;
+    }
+    .submitted-summary p { font-size: 0.88rem; color: var(--light); margin-bottom: 4px; }
+    .submitted-summary span { color: var(--accent); font-weight: 600; }
+
+    #screen-results { flex-direction: column; padding: 2rem; align-items: center; }
+    .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.8rem; width: 100%; max-width: 900px; }
+    .results-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.4rem; max-width: 900px; width: 100%; }
+    .recommendation-box {
+      background: rgba(56,201,126,0.07); border: 1px solid rgba(56,201,126,0.2);
+      border-radius: 10px; padding: 1rem 1.2rem; margin-top: 1rem;
+    }
+    .recommendation-box p { font-size: 0.9rem; line-height: 1.6; color: var(--light); }
+    .no-data { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 1.5rem 0; }
+    .eval-count-badge {
+      display: inline-block; background: rgba(56,201,126,0.15); color: var(--success);
+      border: 1px solid rgba(56,201,126,0.3); border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; padding: 2px 10px; margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 600px) {
+      .role-cards { flex-direction: column; }
+      .admin-body, .results-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SCREEN 1: ROLE SELECTION -->
+<div id="screen-role" class="screen active">
+  <div class="inner">
+    <div class="logo">OLLC <span>Evaluation System</span></div>
+    <p class="subtitle">Please select your role to continue</p>
+    <div class="role-cards">
+      <div class="role-card" onclick="goLogin('Admin')">
+        <div class="role-icon">🏛️</div>
+        <h3>Admin</h3>
+        <p>View &amp; manage evaluations</p>
+      </div>
+      <div class="role-card" onclick="goLogin('Student')">
+        <div class="role-icon">🎓</div>
+        <h3>Student</h3>
+        <p>Evaluate your teachers</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: LOGIN -->
+<div id="screen-login" class="screen">
+  <div class="inner">
+    <div class="logo">OLLC <span>Evaluation System</span></div>
+    <div class="card">
+      <h2 id="login-title">Login</h2>
+      <p class="desc" id="login-desc">Enter your credentials to access the system.</p>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="username" placeholder="Enter username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter password" />
+      </div>
+      <button class="btn btn-primary btn-full btn-lg" style="margin-top:0.5rem;" onclick="doLogin()">Login</button>
+      <div class="divider"></div>
+      <button class="btn btn-ghost btn-full" onclick="show('screen-role')">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: ADMIN DASHBOARD -->
+<div id="screen-admin" class="screen">
+  <div class="admin-header">
+    <div class="logo" style="font-size:1.3rem;">OLLC <span style="display:inline;font-size:0.75rem;color:var(--muted);">Admin Dashboard</span></div>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <span class="badge badge-gold">Admin</span>
+      <button class="btn btn-outline" onclick="show('screen-role')">Logout</button>
+    </div>
+  </div>
+  <div class="admin-body">
+    <div class="card">
+      <h3>📋 View Evaluation Results</h3>
+      <div class="form-group">
+        <label>Select Teacher</label>
+        <select id="admin-teacher">
+          <option value="">-- Choose --</option>
+      
+        <option>Mr. Rex Madamba</option>
+        <option>Ms. Therese Angelie Limbo</option>
+        <option>Ms. Mary Rose Anere</option>
+        <option>Ms. Rose Anne Ramirez</option>
+        <option>Ms. Patricia Saplan</option>
+        <option>Ms. Jae Anne Punongbayan</option>
+        <option>Mr. Jeremie Dawal</option>
+        <option>Ms. MC Tresvalles</option>
+        <option>Mr. Omar Santiago</option>
+        <option>Mr. Aljon Sarmiento</option>
+        <option>Ms. Ynnah Araque</option>
+        <option>Mr. Christian Tamondong</option>
+        <option>Ms. Dionne Legazpi</option>
+        <option>Ms. Rose Ann Fulgencio</option>
+        <option>Mr. Joel Quimado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>School Year</label>
+        <select id="admin-year">
+          <option>2025–2026</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="viewResults()">View Results</button>
+    </div>
+
+    <!-- LIVE QUICK STATS — auto-updates on every submission -->
+    <div class="card">
+      <h3>📊 Quick Stats</h3>
+      <div class="score-block">
+        <div class="label">Total Evaluations</div>
+        <div class="value" id="stat-total">0</div>
+      </div>
+      <div class="score-block">
+        <div class="label">Teachers Evaluated</div>
+        <div class="value" id="stat-teachers">0</div>
+      </div>
+      <div class="score-block">
+        <div class="label">Overall Average</div>
+        <div class="value" id="stat-avg">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: STUDENT EVALUATION -->
+<div id="screen-student" class="screen">
+  <div class="student-header">
+    <div class="logo" style="font-size:1.3rem;">OLLC <span style="display:inline;font-size:0.75rem;color:var(--muted);">Student Evaluation</span></div>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <span class="badge badge-blue">Student</span>
+      <button class="btn btn-outline" onclick="show('screen-role')">Logout</button>
+    </div>
+  </div>
+  <div class="card eval-form-card">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Select Teacher</label>
+        <select id="eval-teacher">
+          <option value="">-- Choose --</option>
+          <option>Mr. Rex Madamba</option>
+        <option>Ms. Therese Angelie Limbo</option>
+        <option>Ms. Mary Rose Anere</option>
+        <option>Ms. Rose Anne Ramirez</option>
+        <option>Ms. Patricia Saplan</option>
+        <option>Ms. Jae Anne Punongbayan</option>
+        <option>Mr. Jeremie Dawal</option>
+        <option>Ms. MC Tresvalles</option>
+        <option>Mr. Omar Santiago</option>
+        <option>Mr. Aljon Sarmiento</option>
+        <option>Ms. Ynnah Araque</option>
+        <option>Mr. Christian Tamondong</option>
+        <option>Ms. Dionne Legazpi</option>
+        <option>Ms. Rose Ann Fulgencio</option>
+        <option>Mr. Joel Quimado</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Subject Taught</label>
+        <select id="eval-subject">
+          <option value="">-- Choose --</option>
+          <option>Select Subject</option>
+        <option>Entrepreneurship</option>
+        <option>Research Project</option>
+        <option>Media Information Literacy</option>
+        <option>Contemporary Arts</option>
+        <option>P.E</option>
+        <option>Computer Programming 7</option>
+        <option>Computer Programming 8</option>
+        <option>Work Immersion</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="criteria-section">
+      <h4>Classroom Management</h4>
+      <div class="rating-header"><span>4</span><span>3</span><span>2</span><span>1</span></div>
+      <div id="cm-criteria"></div>
+
+      <h4>Classroom Instruction</h4>
+      <div class="rating-header"><span>4</span><span>3</span><span>2</span><span>1</span></div>
+      <div id="ci-criteria"></div>
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn btn-success btn-full btn-lg" onclick="submitEval()">Submit Evaluation</button>
+  </div>
+</div>
+
+<!-- SCREEN 5: AFTER SUBMIT -->
+<div id="screen-after" class="screen">
+  <div class="inner">
+    <div class="check">✅</div>
+    <h2>Evaluation Submitted!</h2>
+    <p class="sub">Your responses have been recorded. Admin results have been automatically updated.</p>
+    <div class="submitted-summary" id="submitted-summary"></div>
+    <div class="after-btns">
+      <button class="btn btn-primary btn-full btn-lg" onclick="resetForm(); show('screen-student')">Evaluate Next Teacher</button>
+      <button class="btn btn-ghost btn-full" onclick="show('screen-role')">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 6: ADMIN RESULTS -->
+<div id="screen-results" class="screen">
+  <div class="results-header">
+    <div>
+      <button class="btn btn-ghost" onclick="show('screen-admin')" style="margin-bottom:0.6rem;">← Back</button>
+      <div class="logo" style="font-size:1.3rem;">Evaluation Results
+        <span id="result-teacher-label" style="display:inline;font-size:0.8rem;color:var(--muted);"></span>
+      </div>
+    </div>
+    <span class="badge badge-gold">Admin</span>
+  </div>
+  <div class="results-grid">
+    <div class="card">
+      <h3>📈 Score Summary <span class="eval-count-badge" id="result-count-badge">0 evaluations</span></h3>
+      <div id="result-no-data" class="no-data" style="display:none;">No evaluations submitted yet for this teacher.</div>
+      <div id="result-scores">
+        <div class="score-block">
+          <div>
+            <div class="label">Classroom Management</div>
+            <div class="progress-wrap"><div class="progress-bar" id="bar-cm" style="width:0%"></div></div>
+          </div>
+          <div class="value" id="val-cm">—</div>
+        </div>
+        <div class="score-block">
+          <div>
+            <div class="label">Classroom Instruction</div>
+            <div class="progress-wrap"><div class="progress-bar" id="bar-ci" style="width:0%"></div></div>
+          </div>
+          <div class="value" id="val-ci">—</div>
+        </div>
+        <div class="divider"></div>
+        <div class="score-block" style="background:rgba(232,168,56,0.1);">
+          <div class="label" style="color:var(--accent);font-weight:700;">Overall Score</div>
+          <div class="value" id="val-overall" style="font-size:2rem;">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>💬 Recommendation</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:0.8rem;">
+        Based on evaluation results for
+        <strong id="result-teacher-name" style="color:var(--light);">—</strong>
+        (SY <span id="result-year">—</span>):
+      </p>
+      <div class="recommendation-box">
+        <p id="recommendation-text">No evaluations submitted yet.</p>
+      </div>
+      <div style="margin-top:1.2rem;">
+        <p style="font-size:0.8rem;color:var(--muted);">
+          Rating Scale:
+          <strong style="color:var(--light);">4</strong> – Outstanding &nbsp;|&nbsp;
+          <strong style="color:var(--light);">3</strong> – Satisfactory &nbsp;|&nbsp;
+          <strong style="color:var(--light);">2</strong> – Needs Improvement &nbsp;|&nbsp;
+          <strong style="color:var(--light);">1</strong> – Poor
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── CRITERIA ── */
+  const cmCriteria = [
+    'Maintains an orderly and clean classroom environment',
+    'Manages student behavior effectively and fairly',
+    'Starts and ends class on time',
+    'Establishes and enforces classroom rules and procedures',
+    'Handles disruptions calmly and professionally',
+    'Ensures all students are actively engaged during lessons',
+    'Uses seating arrangements that support learning',
+    'Monitors student activity throughout the class period',
+    'Creates a safe and respectful classroom atmosphere',
+    'Manages instructional materials and resources efficiently',
+  ];
+  const ciCriteria = [
+    'Explains lessons clearly and in an organized manner',
+    'Uses appropriate and varied teaching strategies',
+    'Provides relevant examples and real-life applications',
+    'Encourages student participation and interaction',
+    'Uses visual aids, tools, or technology to support learning',
+    'Checks for student understanding regularly',
+    'Gives clear and constructive feedback on student work',
+    'Paces the lesson appropriately for the students level',
+    'Connects new lessons to prior knowledge or past topics',
+    'Summarizes key points at the end of the lesson',
+  ];
+
+  /* ── DATA STORE ──
+     evalStore[teacherName] = [ { cm: [scores…], ci: [scores…] }, … ]
+  */
+  const evalStore = {};
+  let currentRole = 'Student';
+
+  /* ── BUILD RATING ROWS ── */
+  function buildRatingRows(containerId, items, prefix) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    items.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'rating-row';
+      row.innerHTML = `
+        <div class="rating-label">${i + 1}. ${item}</div>
+        <div class="rating-options">
+          ${[4, 3, 2, 1].map(v => `
+            <label>
+              <input type="radio" name="${prefix}_${i}" value="${v}" />
+              <div class="rating-circle">${v}</div>
+            </label>`).join('')}
+        </div>`;
+      container.appendChild(row);
+    });
+  }
+  buildRatingRows('cm-criteria', cmCriteria, 'cm');
+  buildRatingRows('ci-criteria', ciCriteria, 'ci');
+
+  /* ── NAVIGATION ── */
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  function goLogin(role) {
+    currentRole = role;
+    document.getElementById('login-title').textContent = role + ' Login';
+    document.getElementById('login-desc').textContent =
+      `Sign in as ${role} to access the OLLC Evaluation System.`;
+    show('screen-login');
+  }
+
+  function doLogin() {
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if (!user || !pass) { alert('Please enter both username and password.'); return; }
+    if (currentRole === 'Admin') {
+      if (user !== 'ollc_admin' || pass !== 'OLLCadmin543') {
+        alert('Invalid admin credentials. Please try again.');
+        document.getElementById('password').value = '';
+        return;
+      }
+      refreshQuickStats();
+      show('screen-admin');
+    } else {
+      resetForm();
+      show('screen-student');
+    }
+  }
+
+  /* ── RESET FORM ── */
+  function resetForm() {
+    document.getElementById('eval-teacher').value = '';
+    document.getElementById('eval-subject').value = '';
+    document.querySelectorAll('#screen-student input[type="radio"]')
+      .forEach(r => r.checked = false);
+  }
+
+  /* ── HELPERS ── */
+  function collectRatings(prefix, count) {
+    return Array.from({ length: count }, (_, i) => {
+      const checked = document.querySelector(`input[name="${prefix}_${i}"]:checked`);
+      return checked ? parseInt(checked.value) : null;
+    });
+  }
+
+  function avg(arr) {
+    const valid = arr.filter(v => v !== null && v !== undefined);
+    return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+  }
+
+  /* ── SUBMIT EVALUATION ── */
+  function submitEval() {
+    const teacher = document.getElementById('eval-teacher').value;
+    const subject = document.getElementById('eval-subject').value;
+    if (!teacher) { alert('Please select a teacher.'); return; }
+    if (!subject) { alert('Please select a subject.'); return; }
+
+    const cmScores = collectRatings('cm', cmCriteria.length);
+    const ciScores = collectRatings('ci', ciCriteria.length);
+
+    if (cmScores.every(v => v === null)) {
+      alert('Please rate at least one Classroom Management criterion.'); return;
+    }
+    if (ciScores.every(v => v === null)) {
+      alert('Please rate at least one Classroom Instruction criterion.'); return;
+    }
+
+    // Save to store
+    if (!evalStore[teacher]) evalStore[teacher] = [];
+    evalStore[teacher].push({ cm: cmScores, ci: ciScores });
+
+    // Show summary on success screen
+    const cmA = avg(cmScores);
+    const ciA = avg(ciScores);
+    const overall = avg([cmA, ciA]);
+    document.getElementById('submitted-summary').innerHTML = `
+      <p>👨‍🏫 Teacher: <span>${teacher}</span></p>
+      <p>📚 Subject: <span>${subject}</span></p>
+      <p>📋 Classroom Management Avg: <span>${cmA ? cmA.toFixed(2) : '—'}</span></p>
+      <p>📖 Classroom Instruction Avg: <span>${ciA ? ciA.toFixed(2) : '—'}</span></p>
+      <p>⭐ Overall Score: <span>${overall ? overall.toFixed(2) : '—'}</span></p>
+    `;
+
+    // Auto-update admin stats immediately
+    refreshQuickStats();
+
+    show('screen-after');
+  }
+
+  /* ── REFRESH QUICK STATS (called after every submit) ── */
+  function refreshQuickStats() {
+    let totalEvals = 0;
+    let teacherCount = 0;
+    const allOverall = [];
+
+    for (const teacher in evalStore) {
+      const entries = evalStore[teacher];
+      if (entries.length > 0) {
+        teacherCount++;
+        totalEvals += entries.length;
+        entries.forEach(e => {
+          const o = avg([avg(e.cm), avg(e.ci)]);
+          if (o !== null) allOverall.push(o);
+        });
+      }
+    }
+
+    const globalAvg = allOverall.length
+      ? (allOverall.reduce((a, b) => a + b, 0) / allOverall.length).toFixed(2)
+      : '—';
+
+    setAndPulse('stat-total', totalEvals);
+    setAndPulse('stat-teachers', teacherCount);
+    setAndPulse('stat-avg', globalAvg);
+  }
+
+  function setAndPulse(id, val) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.classList.remove('updated');
+    void el.offsetWidth; // force reflow to restart animation
+    el.classList.add('updated');
+  }
+
+  /* ── VIEW RESULTS (auto-populated from store) ── */
+  function viewResults() {
+    const teacher = document.getElementById('admin-teacher').value;
+    const year    = document.getElementById('admin-year').value;
+    if (!teacher) { alert('Please select a teacher.'); return; }
+
+    document.getElementById('result-teacher-label').textContent = '– ' + teacher;
+    document.getElementById('result-teacher-name').textContent  = teacher;
+    document.getElementById('result-year').textContent          = year;
+
+    const entries = evalStore[teacher] || [];
+    const badge   = document.getElementById('result-count-badge');
+    badge.textContent = entries.length + (entries.length === 1 ? ' evaluation' : ' evaluations');
+
+    if (entries.length === 0) {
+      document.getElementById('result-no-data').style.display   = 'block';
+      document.getElementById('result-scores').style.display    = 'none';
+      document.getElementById('recommendation-text').textContent =
+        'No evaluations submitted yet. Results will appear here after students submit.';
+      show('screen-results');
+      return;
+    }
+
+    document.getElementById('result-no-data').style.display  = 'none';
+    document.getElementById('result-scores').style.display   = 'block';
+
+    // Aggregate all scores for this teacher
+    let allCm = [], allCi = [];
+    entries.forEach(e => {
+      e.cm.forEach(v => { if (v !== null) allCm.push(v); });
+      e.ci.forEach(v => { if (v !== null) allCi.push(v); });
+    });
+
+    const cmAvg      = avg(allCm);
+    const ciAvg      = avg(allCi);
+    const overallAvg = avg([cmAvg, ciAvg]);
+
+    document.getElementById('val-cm').textContent      = cmAvg      ? cmAvg.toFixed(2)      : '—';
+    document.getElementById('val-ci').textContent      = ciAvg      ? ciAvg.toFixed(2)      : '—';
+    document.getElementById('val-overall').textContent = overallAvg ? overallAvg.toFixed(2) : '—';
+
+    document.getElementById('bar-cm').style.width = cmAvg      ? ((cmAvg / 4) * 100).toFixed(1) + '%' : '0%';
+    document.getElementById('bar-ci').style.width = ciAvg      ? ((ciAvg / 4) * 100).toFixed(1) + '%' : '0%';
+
+    document.getElementById('recommendation-text').textContent =
+      getRecommendation(overallAvg, teacher);
+
+    show('screen-results');
+  }
+
+  /* ── DYNAMIC RECOMMENDATION ── */
+  function getRecommendation(score, teacher) {
+    if (score === null) return 'Insufficient data to generate a recommendation.';
+    if (score >= 3.5)
+      return `${teacher} demonstrates outstanding classroom performance with excellent management and instructional skills. It is highly recommended to recognize this achievement and encourage the continuation of these effective practices. The teacher may also serve as a mentor to colleagues.`;
+    if (score >= 2.5)
+      return `${teacher} demonstrates satisfactory classroom performance. Classroom management and instructional delivery are adequate. It is recommended to focus on enhancing student engagement and incorporating more varied teaching strategies to reach an outstanding rating.`;
+    if (score >= 1.5)
+      return `${teacher} needs improvement in one or more key areas. It is recommended that the teacher attend professional development training focused on classroom management and effective instructional techniques. Regular observation and coaching sessions are also advised.`;
+    return `${teacher} requires immediate support and intervention. A structured mentoring program and regular classroom observations should be implemented to address critical deficiencies in both classroom management and instructional delivery.`;
+  }
+</script>
+</body>
+</html>
